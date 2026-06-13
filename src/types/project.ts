@@ -1,4 +1,4 @@
-import type { ID, ISODateString } from './common';
+import type { DayKey, ID, ISODateString } from './common';
 
 /**
  * A macro-level goal the user is advancing toward. Progress is derived (D6):
@@ -52,6 +52,42 @@ export interface Milestone {
   completedAt: ISODateString | null;
 
   /** Ordering position within the parent project (ascending). */
+  sortOrder: number;
+
+  /**
+   * Optional due date as a local calendar day ({@link DayKey}); `null` when
+   * unset. A milestone is overdue when this day is in the past and the
+   * milestone is incomplete — completed milestones never read as overdue.
+   */
+  deadline: DayKey | null;
+
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+}
+
+/**
+ * An ordered, completable unit of work within a {@link Milestone}. When a
+ * milestone owns one or more sub-tasks its completion is derived from them
+ * (auto-roll-up): the milestone is complete iff every sub-task is complete.
+ */
+export interface Subtask {
+  id: ID;
+  milestoneId: ID;
+  title: string;
+
+  /** Completion state of this sub-task. */
+  completed: boolean;
+  /** When the sub-task was completed; `null` while incomplete. */
+  completedAt: ISODateString | null;
+
+  /**
+   * Optional due date as a local calendar day ({@link DayKey}); `null` when
+   * unset. Overdue when this day is in the past and the sub-task is
+   * incomplete — completed sub-tasks never read as overdue.
+   */
+  deadline: DayKey | null;
+
+  /** Ordering position within the parent milestone (ascending). */
   sortOrder: number;
 
   createdAt: ISODateString;

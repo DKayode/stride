@@ -22,6 +22,7 @@ function milestone(id: string, completed: boolean, sortOrder: number): Milestone
     title: id,
     completed,
     completedAt: completed ? '2026-01-02T00:00:00.000Z' : null,
+    deadline: null,
     sortOrder,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',

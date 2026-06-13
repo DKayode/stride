@@ -102,6 +102,7 @@ export async function addMilestone(projectId: ID, title: string): Promise<Milest
     title: title.trim(),
     completed: false,
     completedAt: null,
+    deadline: null,
     sortOrder: await nextMilestoneSortOrder(projectId),
     createdAt: ts,
     updatedAt: ts,

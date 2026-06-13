@@ -14,4 +14,4 @@ export type {
 } from './habit';
 export { isQuantifiedHabit, isBinaryHabit, isDayComplete } from './habit';
 
-export type { Project, Milestone, ProjectProgress } from './project';
+export type { Project, Milestone, Subtask, ProjectProgress } from './project';
