@@ -24,5 +24,10 @@ export {
   setMilestoneCompleted,
   toggleMilestone,
   deleteMilestone,
+  addSubtask,
+  updateSubtask,
+  setSubtaskCompleted,
+  toggleSubtask,
+  deleteSubtask,
 } from './projects';
 export type { CreateProjectInput, UpdateProjectInput } from './projects';

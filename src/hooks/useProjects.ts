@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/database';
 import { computeLinkedContribution, computeProjectProgress, type LinkedHabitContribution } from '../lib/progress';
 import { todayKey } from '../lib/date';
-import type { DayKey, ID, Milestone, Project, ProjectProgress } from '../types';
+import type { DayKey, ID, Milestone, Project, ProjectProgress, Subtask } from '../types';
 
 const EMPTY_CONTRIBUTION: LinkedHabitContribution = { total: 0, completed: 0 };
 
@@ -36,6 +36,18 @@ export function useMilestones(projectId: ID | undefined): Milestone[] {
   );
 }
 
+/** Reactive, ordered sub-tasks belonging to a milestone. */
+export function useSubtasks(milestoneId: ID | undefined): Subtask[] {
+  return useLiveQuery(
+    () =>
+      milestoneId
+        ? db.subtasks.where('milestoneId').equals(milestoneId).sortBy('sortOrder')
+        : Promise.resolve<Subtask[]>([]),
+    [milestoneId],
+    [] as Subtask[],
+  );
+}
+
 /**
  * Reactive linked-habit contribution for a project (The Link, D7): how many
  * non-archived habits reference the project and how many are complete today.
@@ -62,17 +74,47 @@ export function useLinkedHabitContribution(
 }
 
 /**
- * Reactive derived progress for a single project, including linked-habit
- * contribution (The Link). Recomputes whenever the project, its milestones,
- * its linked habits, or today's completions change — so completing a linked
- * habit visibly moves the project's percentage.
+ * Reactive sub-tasks for a set of milestones, grouped by `milestoneId` and
+ * ordered by `sortOrder` — the per-milestone input the progress pool needs.
+ * Recomputes whenever the milestone set or any of their sub-tasks change.
+ */
+function useSubtasksByMilestones(milestones: readonly Milestone[]): Map<ID, Subtask[]> {
+  const key = milestones.map((m) => m.id).join(',');
+  return useLiveQuery(
+    async () => {
+      const grouped = new Map<ID, Subtask[]>();
+      const ids = key ? key.split(',') : [];
+      if (ids.length === 0) return grouped;
+      const all = await db.subtasks.where('milestoneId').anyOf(ids).sortBy('sortOrder');
+      for (const subtask of all) {
+        const list = grouped.get(subtask.milestoneId) ?? [];
+        list.push(subtask);
+        grouped.set(subtask.milestoneId, list);
+      }
+      return grouped;
+    },
+    [key],
+    new Map<ID, Subtask[]>(),
+  );
+}
+
+/**
+ * Reactive derived progress for a single project, including sub-task
+ * auto-roll-up and linked-habit contribution (The Link). Recomputes whenever
+ * the project, its milestones, their sub-tasks, its linked habits, or today's
+ * completions change — so completing a sub-task or linked habit visibly moves
+ * the project's percentage.
  */
 export function useProjectProgress(project: Project | undefined): ProjectProgress | undefined {
   const milestones = useMilestones(project?.id);
+  const subtasksByMilestone = useSubtasksByMilestones(milestones);
   const linkedHabits = useLinkedHabitContribution(project?.id);
   return useMemo(
-    () => (project ? computeProjectProgress(project, milestones, { linkedHabits }) : undefined),
-    [project, milestones, linkedHabits],
+    () =>
+      project
+        ? computeProjectProgress(project, milestones, { linkedHabits, subtasksByMilestone })
+        : undefined,
+    [project, milestones, subtasksByMilestone, linkedHabits],
   );
 }
 

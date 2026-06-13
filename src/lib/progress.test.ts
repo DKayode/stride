@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { computeLinkedContribution, computeProjectProgress, orderMilestones } from './progress';
-import type { BinaryHabit, Milestone, Project, QuantifiedHabit } from '../types';
+import type { BinaryHabit, Milestone, Project, QuantifiedHabit, Subtask } from '../types';
 
 const project: Project = {
   id: 'p1',
@@ -22,6 +22,7 @@ function milestone(id: string, completed: boolean, sortOrder: number): Milestone
     title: id,
     completed,
     completedAt: completed ? '2026-01-02T00:00:00.000Z' : null,
+    deadline: null,
     sortOrder,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
@@ -67,6 +68,86 @@ describe('computeProjectProgress — with milestones', () => {
     expect(result.fraction).toBeCloseTo(0.25);
     expect(result.percent).toBe(25);
     expect(result.milestonesCompleted).toBe(1);
+  });
+});
+
+function subtask(id: string, milestoneId: string, completed: boolean, sortOrder: number): Subtask {
+  return {
+    id,
+    milestoneId,
+    title: id,
+    completed,
+    completedAt: completed ? '2026-01-02T00:00:00.000Z' : null,
+    deadline: null,
+    sortOrder,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  };
+}
+
+describe('computeProjectProgress — sub-task auto-roll-up pool', () => {
+  it('counts each sub-task as a unit for a milestone that has them', () => {
+    // one milestone, 4 sub-tasks, 1 done → 1/4
+    const subtasksByMilestone = new Map([
+      ['a', [subtask('s1', 'a', true, 0), subtask('s2', 'a', false, 1), subtask('s3', 'a', false, 2), subtask('s4', 'a', false, 3)]],
+    ]);
+    const result = computeProjectProgress(project, [milestone('a', false, 0)], {
+      subtasksByMilestone,
+    });
+    expect(result.fraction).toBeCloseTo(0.25);
+    expect(result.percent).toBe(25);
+    expect(result.subtasksTotal).toBe(4);
+    expect(result.subtasksCompleted).toBe(1);
+  });
+
+  it('a milestone with no sub-tasks still counts as one unit (as before)', () => {
+    const result = computeProjectProgress(project, [milestone('a', true, 0), milestone('b', false, 1)], {
+      subtasksByMilestone: new Map(),
+    });
+    expect(result.fraction).toBeCloseTo(0.5); // 1 of 2 bare milestones done
+    expect(result.subtasksTotal).toBe(0);
+    expect(result.subtasksCompleted).toBe(0);
+  });
+
+  it('mixes sub-task milestones and bare milestones in one pool', () => {
+    // milestone a: 2 sub-tasks both done (2/2); milestone b: bare, incomplete (0/1) → 2/3
+    const subtasksByMilestone = new Map([
+      ['a', [subtask('s1', 'a', true, 0), subtask('s2', 'a', true, 1)]],
+    ]);
+    const result = computeProjectProgress(project, [milestone('a', true, 0), milestone('b', false, 1)], {
+      subtasksByMilestone,
+    });
+    expect(result.fraction).toBeCloseTo(2 / 3);
+    expect(result.percent).toBe(67);
+    expect(result.subtasksTotal).toBe(2);
+    expect(result.subtasksCompleted).toBe(2);
+  });
+
+  it('pools sub-task units together with linked habits', () => {
+    // milestone a: 3 sub-tasks, 1 done; + 1 linked habit incomplete → (1+0)/(3+1) = 1/4
+    const subtasksByMilestone = new Map([
+      ['a', [subtask('s1', 'a', true, 0), subtask('s2', 'a', false, 1), subtask('s3', 'a', false, 2)]],
+    ]);
+    const result = computeProjectProgress(project, [milestone('a', false, 0)], {
+      subtasksByMilestone,
+      linkedHabits: { total: 1, completed: 0 },
+    });
+    expect(result.fraction).toBeCloseTo(0.25);
+    expect(result.linkedHabits).toBe(1);
+    expect(result.subtasksTotal).toBe(3);
+    expect(result.subtasksCompleted).toBe(1);
+  });
+
+  it('all sub-tasks done across milestones → 100%', () => {
+    const subtasksByMilestone = new Map([
+      ['a', [subtask('s1', 'a', true, 0), subtask('s2', 'a', true, 1)]],
+      ['b', [subtask('s3', 'b', true, 0)]],
+    ]);
+    const result = computeProjectProgress(project, [milestone('a', true, 0), milestone('b', true, 1)], {
+      subtasksByMilestone,
+    });
+    expect(result.fraction).toBe(1);
+    expect(result.percent).toBe(100);
   });
 });
 

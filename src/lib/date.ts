@@ -37,3 +37,20 @@ export function diffDayKeys(a: DayKey, b: DayKey): number {
   const ms = dayKeyToDate(a).getTime() - dayKeyToDate(b).getTime();
   return Math.round(ms / 86_400_000);
 }
+
+/**
+ * Whether a deadline is overdue: a non-null day in the past for an item that
+ * is not yet completed. Completed items never read as overdue.
+ */
+export function isOverdue(
+  deadline: DayKey | null,
+  completed: boolean,
+  today: DayKey = todayKey(),
+): boolean {
+  return deadline !== null && !completed && diffDayKeys(deadline, today) < 0;
+}
+
+/** Format a day key for compact display, e.g. `Jun 13`. */
+export function formatDayKeyShort(key: DayKey): string {
+  return dayKeyToDate(key).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
