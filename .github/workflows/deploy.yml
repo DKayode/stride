@@ -154,11 +154,14 @@ jobs:
           script: |
             set -euo pipefail
             cd /opt/stride
-            chmod +x deploy.sh
-            ./deploy.sh
+            # scp preserves the repo path, so the script is at scripts/deploy.sh.
+            chmod +x scripts/deploy.sh
+            ./scripts/deploy.sh
         env:
           IMAGE: ${{ env.IMAGE }}
           IMAGE_SHA: ${{ env.IMAGE }}:sha-${{ steps.vars.outputs.sha_short }}
-          GHCR_USER: ${{ github.actor }}
+          # GHCR_PAT must belong to GHCR_USER. Defaults to the pushing actor;
+          # override with a GHCR_USER secret if the PAT is on a different account.
+          GHCR_USER: ${{ secrets.GHCR_USER || github.actor }}
           GHCR_PAT: ${{ secrets.GHCR_PAT }}
           STRIDE_DIR: /opt/stride
