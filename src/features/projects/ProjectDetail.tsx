@@ -3,7 +3,7 @@ import { Check, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Sheet } from '../../components/Sheet';
 import { ProgressRing } from '../../components/ProgressRing';
 import { ProjectForm } from './ProjectForm';
-import { useMilestones, useProjectProgress } from '../../hooks';
+import { useLinkedHabitContribution, useMilestones, useProjectProgress } from '../../hooks';
 import { addMilestone, deleteMilestone, setProjectProgress, toggleMilestone } from '../../db';
 import { getIcon } from '../../lib/appearance';
 import type { Project } from '../../types';
@@ -18,6 +18,7 @@ interface ProjectDetailProps {
 export function ProjectDetail({ open, project, onClose }: ProjectDetailProps) {
   const milestones = useMilestones(project.id);
   const progress = useProjectProgress(project);
+  const linked = useLinkedHabitContribution(project.id);
   const [newTitle, setNewTitle] = useState('');
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
@@ -59,7 +60,15 @@ export function ProjectDetail({ open, project, onClose }: ProjectDetailProps) {
             <p className="mt-1 text-xs text-slate-500">
               {progress && progress.milestonesTotal > 0
                 ? `${progress.milestonesCompleted}/${progress.milestonesTotal} milestones`
-                : 'No milestones — using manual progress'}
+                : linked.total > 0
+                  ? 'Progress from linked habits'
+                  : 'No milestones — using manual progress'}
+              {linked.total > 0 && (
+                <span className="text-brand">
+                  {' · '}
+                  {linked.completed}/{linked.total} linked habit{linked.total === 1 ? '' : 's'} today
+                </span>
+              )}
             </p>
           </div>
           <button
@@ -72,7 +81,7 @@ export function ProjectDetail({ open, project, onClose }: ProjectDetailProps) {
           </button>
         </div>
 
-        {progress && progress.milestonesTotal === 0 && (
+        {progress && progress.milestonesTotal === 0 && linked.total === 0 && (
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-slate-300">
               Manual progress: {Math.round(project.manualProgress * 100)}%

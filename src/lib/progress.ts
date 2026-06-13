@@ -1,13 +1,14 @@
-import type { Milestone, Project, ProjectProgress } from '../types';
+import { isDayComplete, type Habit, type ID, type Milestone, type Project, type ProjectProgress } from '../types';
 
 /**
- * Aggregate contribution of habits linked to a project (The Link, D7).
- * `fraction` is the 0..1 completion of those linked habits; `count` is how
- * many habits are linked. In D6 this is always absent / zero.
+ * Aggregate contribution of habits linked to a project (The Link, D7),
+ * expressed as raw counts so it can be pooled with milestones by count.
+ * `total` is how many (non-archived) habits are linked; `completed` is how
+ * many of those are complete for the reference day.
  */
 export interface LinkedHabitContribution {
-  count: number;
-  fraction: number;
+  total: number;
+  completed: number;
 }
 
 function clamp01(value: number): number {
@@ -21,20 +22,41 @@ export function orderMilestones(milestones: readonly Milestone[]): Milestone[] {
 }
 
 /**
+ * Compute the linked-habit contribution for a set of habits given each
+ * habit's logged value for the reference day. Pure and unit-tested; the
+ * reactive hook supplies the per-habit values from today's completions.
+ */
+export function computeLinkedContribution(
+  linkedHabits: readonly Habit[],
+  valuesByHabit: ReadonlyMap<ID, number>,
+): LinkedHabitContribution {
+  let completed = 0;
+  for (const habit of linkedHabits) {
+    if (isDayComplete(habit, valuesByHabit.get(habit.id) ?? 0)) {
+      completed += 1;
+    }
+  }
+  return { total: linkedHabits.length, completed };
+}
+
+/**
  * Compute a project's overall progress as a pure function of its milestones
  * and (optionally) its linked-habit contribution.
  *
- * Base progress:
- * - With milestones: the completed/total ratio.
- * - Without milestones: the project's manual progress fallback (D3 model).
+ * Model — a COUNT-WEIGHTED POOL: every milestone and every linked habit is one
+ * unit toward the goal:
  *
- * Linked-habit contribution (D7) is an explicit extension point: when present
- * and non-empty, linked-habit completion is blended in as an equally-weighted
- * component on top of the base. When absent or `count === 0` this is a no-op,
- * so D6 behaviour is exactly milestone/manual progress — D7 can supply real
- * contribution data without changing this function's shape.
+ *     fraction = (completedMilestones + completedLinkedHabits)
+ *                / (totalMilestones + totalLinkedHabits)
  *
- * Mirrors `computeStreak`: pure, fully typed, and unit-tested.
+ * This keeps linked-habit completion proportional: in a 10-milestone project
+ * with one linked habit, that habit is worth 1/11 of progress — a meaningful,
+ * intuitive nudge rather than the wild swing of an equal-weight average. When
+ * a project has neither milestones nor linked habits, `manualProgress` is the
+ * fallback. Linked-habit data is optional, so with no link this reduces
+ * exactly to the D6 milestone/manual behaviour.
+ *
+ * Pure, fully typed, and unit-tested (mirrors `computeStreak`).
  */
 export function computeProjectProgress(
   project: Project,
@@ -44,14 +66,16 @@ export function computeProjectProgress(
   const milestonesTotal = milestones.length;
   const milestonesCompleted = milestones.reduce((n, m) => (m.completed ? n + 1 : n), 0);
 
-  const base =
-    milestonesTotal > 0 ? milestonesCompleted / milestonesTotal : clamp01(project.manualProgress);
+  const linkedTotal = options.linkedHabits?.total ?? 0;
+  const linkedCompleted = options.linkedHabits
+    ? Math.min(Math.max(0, options.linkedHabits.completed), linkedTotal)
+    : 0;
 
-  const linked = options.linkedHabits;
+  const unitTotal = milestonesTotal + linkedTotal;
   const fraction =
-    linked && linked.count > 0
-      ? clamp01((base + clamp01(linked.fraction)) / 2)
-      : clamp01(base);
+    unitTotal > 0
+      ? clamp01((milestonesCompleted + linkedCompleted) / unitTotal)
+      : clamp01(project.manualProgress);
 
   return {
     projectId: project.id,
@@ -59,6 +83,6 @@ export function computeProjectProgress(
     percent: Math.round(fraction * 100),
     milestonesTotal,
     milestonesCompleted,
-    linkedHabits: linked?.count ?? 0,
+    linkedHabits: linkedTotal,
   };
 }

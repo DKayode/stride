@@ -11,5 +11,6 @@ export {
   useProject,
   useMilestones,
   useProjectProgress,
+  useLinkedHabitContribution,
   useMilestonesByProject,
 } from './useProjects';

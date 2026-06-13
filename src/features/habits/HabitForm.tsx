@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Check, Trash2 } from 'lucide-react';
+import { Check, Link2, Trash2 } from 'lucide-react';
 import { Sheet } from '../../components/Sheet';
+import { useProjects } from '../../hooks';
 import { COLORS, ICON_NAMES, getIcon } from '../../lib/appearance';
 import { createHabit, deleteHabit, updateHabit } from '../../db';
-import { isQuantifiedHabit, type Habit, type HabitType } from '../../types';
+import { isQuantifiedHabit, type Habit, type HabitType, type ID } from '../../types';
 
 interface HabitFormProps {
   open: boolean;
@@ -24,7 +25,10 @@ export function HabitForm({ open, habit, onClose }: HabitFormProps) {
   const [unit, setUnit] = useState(habit && isQuantifiedHabit(habit) ? habit.unit : 'L');
   const [color, setColor] = useState(habit?.color ?? COLORS[0]);
   const [icon, setIcon] = useState(habit?.icon ?? ICON_NAMES[0]);
+  const [projectId, setProjectId] = useState<ID | null>(habit?.projectId ?? null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const projects = useProjects();
 
   const trimmedName = name.trim();
   const parsedTarget = Number(target);
@@ -38,12 +42,21 @@ export function HabitForm({ open, habit, onClose }: HabitFormProps) {
         name: trimmedName,
         color,
         icon,
+        projectId,
         ...(type === 'quantified' ? { target: parsedTarget, unit: unit.trim() } : {}),
       });
     } else if (type === 'quantified') {
-      await createHabit({ type, name: trimmedName, target: parsedTarget, unit: unit.trim(), color, icon });
+      await createHabit({
+        type,
+        name: trimmedName,
+        target: parsedTarget,
+        unit: unit.trim(),
+        color,
+        icon,
+        projectId,
+      });
     } else {
-      await createHabit({ type: 'binary', name: trimmedName, color, icon });
+      await createHabit({ type: 'binary', name: trimmedName, color, icon, projectId });
     }
     onClose();
   }
@@ -158,6 +171,41 @@ export function HabitForm({ open, habit, onClose }: HabitFormProps) {
               );
             })}
           </div>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <span className="flex items-center gap-1.5 text-sm font-medium text-slate-300">
+            <Link2 className="size-4" aria-hidden />
+            Link to project
+          </span>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setProjectId(null)}
+              className={`tap rounded-full border px-3 py-1.5 text-sm ${
+                projectId === null ? 'border-brand bg-brand/15 text-white' : 'border-surface-2 text-slate-300'
+              }`}
+            >
+              None
+            </button>
+            {projects.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => setProjectId(p.id)}
+                className={`tap max-w-[12rem] truncate rounded-full border px-3 py-1.5 text-sm ${
+                  projectId === p.id ? 'border-brand bg-brand/15 text-white' : 'border-surface-2 text-slate-300'
+                }`}
+              >
+                {p.name}
+              </button>
+            ))}
+          </div>
+          {projects.length === 0 && (
+            <span className="text-xs text-slate-500">
+              Create a project first to link this habit to it.
+            </span>
+          )}
         </div>
 
         <button

@@ -15,10 +15,14 @@ export function ProjectCard({ project, onOpen }: ProjectCardProps) {
   const Icon = getIcon(project.icon);
   const percent = progress?.percent ?? 0;
 
-  const subtitle =
-    progress && progress.milestonesTotal > 0
-      ? `${progress.milestonesCompleted}/${progress.milestonesTotal} milestones`
-      : 'Manual progress';
+  const parts: string[] = [];
+  if (progress && progress.milestonesTotal > 0) {
+    parts.push(`${progress.milestonesCompleted}/${progress.milestonesTotal} milestones`);
+  }
+  if (progress && progress.linkedHabits > 0) {
+    parts.push(`${progress.linkedHabits} linked habit${progress.linkedHabits === 1 ? '' : 's'}`);
+  }
+  const subtitle = parts.length > 0 ? parts.join(' · ') : 'Manual progress';
 
   return (
     <li>

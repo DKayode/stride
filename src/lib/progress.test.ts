@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { computeProjectProgress, orderMilestones } from './progress';
-import type { Milestone, Project } from '../types';
+import { computeLinkedContribution, computeProjectProgress, orderMilestones } from './progress';
+import type { BinaryHabit, Milestone, Project, QuantifiedHabit } from '../types';
 
 const project: Project = {
   id: 'p1',
@@ -79,22 +79,92 @@ describe('orderMilestones', () => {
   });
 });
 
-describe('computeProjectProgress — D7 extension point', () => {
-  it('is a no-op when no linked habits (identity with base)', () => {
+describe('computeProjectProgress — The Link (count-weighted pool)', () => {
+  it('is a no-op when no linked habits (identity with milestone base)', () => {
     const withEmpty = computeProjectProgress(project, [milestone('a', true, 0)], {
-      linkedHabits: { count: 0, fraction: 0.5 },
+      linkedHabits: { total: 0, completed: 0 },
     });
     expect(withEmpty.fraction).toBe(1); // base ratio, link ignored
     expect(withEmpty.linkedHabits).toBe(0);
   });
 
-  it('blends linked-habit contribution equally with the base', () => {
-    // base = 1/2 = 0.5, linked fraction = 1.0 → (0.5 + 1.0) / 2 = 0.75
-    const blended = computeProjectProgress(project, [milestone('a', true, 0), milestone('b', false, 1)], {
-      linkedHabits: { count: 2, fraction: 1 },
+  it('pools each milestone and linked habit as one unit (no wild swing)', () => {
+    // 9/10 milestones done + 1 incomplete linked habit → (9+0)/(10+1) = 9/11
+    const milestones = Array.from({ length: 10 }, (_, i) => milestone(`m${i}`, i < 9, i));
+    const result = computeProjectProgress(project, milestones, {
+      linkedHabits: { total: 1, completed: 0 },
     });
-    expect(blended.fraction).toBeCloseTo(0.75);
-    expect(blended.percent).toBe(75);
-    expect(blended.linkedHabits).toBe(2);
+    expect(result.fraction).toBeCloseTo(9 / 11);
+    expect(result.percent).toBe(82);
+    expect(result.linkedHabits).toBe(1);
+  });
+
+  it('completing the linked habit raises the percentage', () => {
+    const milestones = Array.from({ length: 10 }, (_, i) => milestone(`m${i}`, i < 9, i));
+    const done = computeProjectProgress(project, milestones, {
+      linkedHabits: { total: 1, completed: 1 },
+    });
+    expect(done.fraction).toBeCloseTo(10 / 11);
+    expect(done.percent).toBe(91);
+  });
+
+  it('with no milestones, derives progress from linked habits (manual ignored)', () => {
+    const result = computeProjectProgress({ ...project, manualProgress: 0.99 }, [], {
+      linkedHabits: { total: 2, completed: 1 },
+    });
+    expect(result.fraction).toBeCloseTo(0.5);
+    expect(result.percent).toBe(50);
+  });
+
+  it('clamps completed to total defensively', () => {
+    const result = computeProjectProgress(project, [], {
+      linkedHabits: { total: 2, completed: 5 },
+    });
+    expect(result.fraction).toBe(1);
+  });
+});
+
+describe('computeLinkedContribution', () => {
+  const binary: BinaryHabit = {
+    id: 'h1',
+    name: 'Meditate',
+    type: 'binary',
+    projectId: 'p1',
+    color: '#6366f1',
+    icon: 'activity',
+    sortOrder: 0,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+    archivedAt: null,
+  };
+  const quantified: QuantifiedHabit = {
+    ...binary,
+    id: 'h2',
+    type: 'quantified',
+    target: 3,
+    unit: 'L',
+  };
+
+  it('counts completed via isDayComplete for both kinds', () => {
+    const values = new Map<string, number>([
+      ['h1', 1], // binary done
+      ['h2', 2], // quantified partial → not complete
+    ]);
+    expect(computeLinkedContribution([binary, quantified], values)).toEqual({
+      total: 2,
+      completed: 1,
+    });
+  });
+
+  it('treats missing values as zero (not complete)', () => {
+    expect(computeLinkedContribution([binary, quantified], new Map())).toEqual({
+      total: 2,
+      completed: 0,
+    });
+  });
+
+  it('quantified counts once the target is met', () => {
+    const values = new Map<string, number>([['h2', 3]]);
+    expect(computeLinkedContribution([quantified], values)).toEqual({ total: 1, completed: 1 });
   });
 });
