@@ -1,6 +1,6 @@
 import { db } from './database';
 import { newId } from '../lib/id';
-import type { ID, ISODateString, Milestone, Project } from '../types';
+import type { DayKey, ID, ISODateString, Milestone, Project, Subtask } from '../types';
 
 const DEFAULT_COLOR = '#22d3ee';
 const DEFAULT_ICON = 'target';
@@ -45,6 +45,33 @@ async function nextMilestoneSortOrder(projectId: ID): Promise<number> {
   return siblings.reduce((max, m) => Math.max(max, m.sortOrder + 1), 0);
 }
 
+async function nextSubtaskSortOrder(milestoneId: ID): Promise<number> {
+  const siblings = await db.subtasks.where('milestoneId').equals(milestoneId).toArray();
+  return siblings.reduce((max, s) => Math.max(max, s.sortOrder + 1), 0);
+}
+
+/**
+ * Recompute and persist a milestone's completion from its sub-tasks
+ * (auto-roll-up): a milestone with ≥1 sub-task is completed iff every sub-task
+ * is completed, stamping `completedAt` to match. A milestone with zero
+ * sub-tasks is left untouched so it keeps its manual checkbox behaviour. Run
+ * inside a `rw` transaction after any sub-task add/toggle/delete; no-op when
+ * the milestone is gone or its state is already correct.
+ */
+async function reconcileMilestone(milestoneId: ID): Promise<void> {
+  const milestone = await db.milestones.get(milestoneId);
+  if (!milestone) return;
+  const subtasks = await db.subtasks.where('milestoneId').equals(milestoneId).toArray();
+  if (subtasks.length === 0) return;
+  const completed = subtasks.every((s) => s.completed);
+  if (completed === milestone.completed) return;
+  await db.milestones.update(milestoneId, {
+    completed,
+    completedAt: completed ? nowIso() : null,
+    updatedAt: nowIso(),
+  });
+}
+
 /** Create and persist a new project. */
 export async function createProject(input: CreateProjectInput): Promise<Project> {
   const ts = nowIso();
@@ -74,11 +101,14 @@ export async function updateProject(id: ID, patch: UpdateProjectInput): Promise<
 }
 
 /**
- * Delete a project. Cascades to its milestones and unlinks (does not delete)
- * any habits that referenced it, setting their `projectId` back to `null`.
+ * Delete a project. Cascades to its milestones and their sub-tasks, and
+ * unlinks (does not delete) any habits that referenced it, setting their
+ * `projectId` back to `null`.
  */
 export async function deleteProject(id: ID): Promise<void> {
-  await db.transaction('rw', db.projects, db.milestones, db.habits, async () => {
+  await db.transaction('rw', db.projects, db.milestones, db.subtasks, db.habits, async () => {
+    const milestoneIds = await db.milestones.where('projectId').equals(id).primaryKeys();
+    await db.subtasks.where('milestoneId').anyOf(milestoneIds).delete();
     await db.milestones.where('projectId').equals(id).delete();
     await db.habits.where('projectId').equals(id).modify({
       projectId: null,
@@ -93,8 +123,12 @@ export async function setProjectProgress(id: ID, fraction: number): Promise<void
   await updateProject(id, { manualProgress: clampFraction(fraction) });
 }
 
-/** Create and persist a milestone within a project. */
-export async function addMilestone(projectId: ID, title: string): Promise<Milestone> {
+/** Create and persist a milestone within a project, optionally with a deadline. */
+export async function addMilestone(
+  projectId: ID,
+  title: string,
+  deadline: DayKey | null = null,
+): Promise<Milestone> {
   const ts = nowIso();
   const milestone: Milestone = {
     id: newId(),
@@ -102,7 +136,7 @@ export async function addMilestone(projectId: ID, title: string): Promise<Milest
     title: title.trim(),
     completed: false,
     completedAt: null,
-    deadline: null,
+    deadline,
     sortOrder: await nextMilestoneSortOrder(projectId),
     createdAt: ts,
     updatedAt: ts,
@@ -111,10 +145,10 @@ export async function addMilestone(projectId: ID, title: string): Promise<Milest
   return milestone;
 }
 
-/** Patch a milestone's title or ordering. */
+/** Patch a milestone's title, deadline, or ordering. */
 export async function updateMilestone(
   id: ID,
-  patch: Partial<{ title: string; sortOrder: number }>,
+  patch: Partial<{ title: string; deadline: DayKey | null; sortOrder: number }>,
 ): Promise<void> {
   await db.milestones.update(id, { ...patch, updatedAt: nowIso() });
 }
@@ -137,7 +171,83 @@ export async function toggleMilestone(id: ID): Promise<void> {
   });
 }
 
-/** Delete a single milestone. */
+/** Delete a single milestone, cascading to its sub-tasks. */
 export async function deleteMilestone(id: ID): Promise<void> {
-  await db.milestones.delete(id);
+  await db.transaction('rw', db.milestones, db.subtasks, async () => {
+    await db.subtasks.where('milestoneId').equals(id).delete();
+    await db.milestones.delete(id);
+  });
+}
+
+/**
+ * Create and persist a sub-task within a milestone, optionally with a
+ * deadline. Reconciles the parent milestone so adding the first sub-task flips
+ * it to derived (incomplete) state.
+ */
+export async function addSubtask(
+  milestoneId: ID,
+  title: string,
+  deadline: DayKey | null = null,
+): Promise<Subtask> {
+  const ts = nowIso();
+  const subtask: Subtask = {
+    id: newId(),
+    milestoneId,
+    title: title.trim(),
+    completed: false,
+    completedAt: null,
+    deadline,
+    sortOrder: await nextSubtaskSortOrder(milestoneId),
+    createdAt: ts,
+    updatedAt: ts,
+  };
+  await db.transaction('rw', db.subtasks, db.milestones, async () => {
+    await db.subtasks.add(subtask);
+    await reconcileMilestone(milestoneId);
+  });
+  return subtask;
+}
+
+/** Patch a sub-task's title, deadline, or ordering. */
+export async function updateSubtask(
+  id: ID,
+  patch: Partial<{ title: string; deadline: DayKey | null; sortOrder: number }>,
+): Promise<void> {
+  await db.subtasks.update(id, { ...patch, updatedAt: nowIso() });
+}
+
+/**
+ * Set a sub-task's completion state, stamping `completedAt` accordingly, then
+ * reconcile the parent milestone's auto-roll-up.
+ */
+export async function setSubtaskCompleted(id: ID, completed: boolean): Promise<void> {
+  await db.transaction('rw', db.subtasks, db.milestones, async () => {
+    const subtask = await db.subtasks.get(id);
+    if (!subtask) return;
+    await db.subtasks.update(id, {
+      completed,
+      completedAt: completed ? nowIso() : null,
+      updatedAt: nowIso(),
+    });
+    await reconcileMilestone(subtask.milestoneId);
+  });
+}
+
+/** Toggle a sub-task's completion state. */
+export async function toggleSubtask(id: ID): Promise<void> {
+  await db.transaction('rw', db.subtasks, db.milestones, async () => {
+    const subtask = await db.subtasks.get(id);
+    if (!subtask) return;
+    await setSubtaskCompleted(id, !subtask.completed);
+  });
+}
+
+/** Delete a single sub-task, then reconcile the parent milestone. */
+export async function deleteSubtask(id: ID): Promise<void> {
+  await db.transaction('rw', db.subtasks, db.milestones, async () => {
+    const subtask = await db.subtasks.get(id);
+    if (!subtask) return;
+    await db.subtasks.delete(id);
+    await reconcileMilestone(subtask.milestoneId);
+  });
 }
