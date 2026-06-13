@@ -106,6 +106,10 @@ export interface ProjectProgress {
   percent: number;
   milestonesTotal: number;
   milestonesCompleted: number;
+  /** Total sub-tasks across all milestones (auto-roll-up units). */
+  subtasksTotal: number;
+  /** Completed sub-tasks across all milestones. */
+  subtasksCompleted: number;
   /** Number of habits linked to this project (The Link, D7). */
   linkedHabits: number;
 }

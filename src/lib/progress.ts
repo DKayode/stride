@@ -1,4 +1,4 @@
-import { isDayComplete, type Habit, type ID, type Milestone, type Project, type ProjectProgress } from '../types';
+import { isDayComplete, type Habit, type ID, type Milestone, type Project, type ProjectProgress, type Subtask } from '../types';
 
 /**
  * Aggregate contribution of habits linked to a project (The Link, D7),
@@ -40,41 +40,66 @@ export function computeLinkedContribution(
 }
 
 /**
- * Compute a project's overall progress as a pure function of its milestones
- * and (optionally) its linked-habit contribution.
+ * Compute a project's overall progress as a pure function of its milestones,
+ * their sub-tasks (auto-roll-up), and (optionally) its linked-habit
+ * contribution.
  *
- * Model — a COUNT-WEIGHTED POOL: every milestone and every linked habit is one
- * unit toward the goal:
+ * Model — a COUNT-WEIGHTED POOL refined for sub-tasks. Each milestone
+ * contributes units toward the goal: a milestone WITH sub-tasks contributes
+ * `subtaskCount` units (of which `completedSubtasks` are done); a milestone
+ * with NO sub-tasks contributes one unit (done iff the milestone is). Linked
+ * habits pool in as one unit each, unchanged:
  *
- *     fraction = (completedMilestones + completedLinkedHabits)
- *                / (totalMilestones + totalLinkedHabits)
+ *     fraction = (Σ milestoneUnitsCompleted + completedLinkedHabits)
+ *                / (Σ milestoneUnitsTotal + totalLinkedHabits)
  *
- * This keeps linked-habit completion proportional: in a 10-milestone project
- * with one linked habit, that habit is worth 1/11 of progress — a meaningful,
- * intuitive nudge rather than the wild swing of an equal-weight average. When
- * a project has neither milestones nor linked habits, `manualProgress` is the
- * fallback. Linked-habit data is optional, so with no link this reduces
- * exactly to the D6 milestone/manual behaviour.
+ * Counting each sub-task as a unit keeps progress proportional to the real
+ * work outstanding rather than letting a sub-task-heavy milestone weigh the
+ * same as a bare one. When a project has neither milestones nor linked habits,
+ * `manualProgress` is the fallback. Both sub-task and linked-habit data are
+ * optional, so with neither this reduces exactly to the prior milestone/manual
+ * behaviour.
  *
  * Pure, fully typed, and unit-tested (mirrors `computeStreak`).
  */
 export function computeProjectProgress(
   project: Project,
   milestones: readonly Milestone[],
-  options: { linkedHabits?: LinkedHabitContribution } = {},
+  options: {
+    linkedHabits?: LinkedHabitContribution;
+    subtasksByMilestone?: ReadonlyMap<ID, readonly Subtask[]>;
+  } = {},
 ): ProjectProgress {
   const milestonesTotal = milestones.length;
   const milestonesCompleted = milestones.reduce((n, m) => (m.completed ? n + 1 : n), 0);
+
+  let milestoneUnitsTotal = 0;
+  let milestoneUnitsCompleted = 0;
+  let subtasksTotal = 0;
+  let subtasksCompleted = 0;
+  for (const m of milestones) {
+    const subtasks = options.subtasksByMilestone?.get(m.id) ?? [];
+    if (subtasks.length > 0) {
+      const done = subtasks.reduce((n, s) => (s.completed ? n + 1 : n), 0);
+      milestoneUnitsTotal += subtasks.length;
+      milestoneUnitsCompleted += done;
+      subtasksTotal += subtasks.length;
+      subtasksCompleted += done;
+    } else {
+      milestoneUnitsTotal += 1;
+      milestoneUnitsCompleted += m.completed ? 1 : 0;
+    }
+  }
 
   const linkedTotal = options.linkedHabits?.total ?? 0;
   const linkedCompleted = options.linkedHabits
     ? Math.min(Math.max(0, options.linkedHabits.completed), linkedTotal)
     : 0;
 
-  const unitTotal = milestonesTotal + linkedTotal;
+  const unitTotal = milestoneUnitsTotal + linkedTotal;
   const fraction =
     unitTotal > 0
-      ? clamp01((milestonesCompleted + linkedCompleted) / unitTotal)
+      ? clamp01((milestoneUnitsCompleted + linkedCompleted) / unitTotal)
       : clamp01(project.manualProgress);
 
   return {
@@ -83,6 +108,8 @@ export function computeProjectProgress(
     percent: Math.round(fraction * 100),
     milestonesTotal,
     milestonesCompleted,
+    subtasksTotal,
+    subtasksCompleted,
     linkedHabits: linkedTotal,
   };
 }
