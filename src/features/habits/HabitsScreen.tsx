@@ -62,7 +62,16 @@ export function HabitsScreen() {
         </ul>
       )}
 
-      <HabitForm open={formOpen} habit={editing} onClose={() => setFormOpen(false)} />
+      {/* Key by target so the form remounts with fresh state when switching
+          between "create" and editing a specific habit — otherwise useState
+          initializers (seeded from `habit`) only run once and the edit form
+          shows blank fields. */}
+      <HabitForm
+        key={editing?.id ?? 'new'}
+        open={formOpen}
+        habit={editing}
+        onClose={() => setFormOpen(false)}
+      />
     </section>
   );
 }
