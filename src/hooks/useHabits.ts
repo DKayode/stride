@@ -49,3 +49,30 @@ export function useHabitCompletions(habitId: ID | undefined): HabitCompletion[] 
     [] as HabitCompletion[],
   );
 }
+
+/**
+ * Reactive completion values for a set of days (the week grid, D8), keyed as
+ * `habitId → (dayKey → value)`. Re-renders when any completion in the range
+ * changes, so toggling a habit updates the grid instantly.
+ */
+export function useCompletionsForDays(days: DayKey[]): Map<ID, Map<DayKey, number>> {
+  // `days.join` keeps the live query stable across renders with the same week.
+  const key = days.join(',');
+  return useLiveQuery(
+    async () => {
+      const rows = await db.completions.where('date').anyOf(days).toArray();
+      const grid = new Map<ID, Map<DayKey, number>>();
+      for (const row of rows) {
+        let byDay = grid.get(row.habitId);
+        if (!byDay) {
+          byDay = new Map<DayKey, number>();
+          grid.set(row.habitId, byDay);
+        }
+        byDay.set(row.date, row.value);
+      }
+      return grid;
+    },
+    [key],
+    new Map<ID, Map<DayKey, number>>(),
+  );
+}

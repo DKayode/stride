@@ -4,6 +4,7 @@ export {
   useHabit,
   useCompletionsForDate,
   useHabitCompletions,
+  useCompletionsForDays,
 } from './useHabits';
 
 export {
