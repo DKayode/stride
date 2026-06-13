@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/database';
 import { computeLinkedContribution, computeProjectProgress, type LinkedHabitContribution } from '../lib/progress';
 import { todayKey } from '../lib/date';
-import type { DayKey, ID, Milestone, Project, ProjectProgress } from '../types';
+import type { DayKey, ID, Milestone, Project, ProjectProgress, Subtask } from '../types';
 
 const EMPTY_CONTRIBUTION: LinkedHabitContribution = { total: 0, completed: 0 };
 
@@ -33,6 +33,18 @@ export function useMilestones(projectId: ID | undefined): Milestone[] {
         : Promise.resolve<Milestone[]>([]),
     [projectId],
     [] as Milestone[],
+  );
+}
+
+/** Reactive, ordered sub-tasks belonging to a milestone. */
+export function useSubtasks(milestoneId: ID | undefined): Subtask[] {
+  return useLiveQuery(
+    () =>
+      milestoneId
+        ? db.subtasks.where('milestoneId').equals(milestoneId).sortBy('sortOrder')
+        : Promise.resolve<Subtask[]>([]),
+    [milestoneId],
+    [] as Subtask[],
   );
 }
 

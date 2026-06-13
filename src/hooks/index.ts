@@ -11,6 +11,7 @@ export {
   useProjects,
   useProject,
   useMilestones,
+  useSubtasks,
   useProjectProgress,
   useLinkedHabitContribution,
   useMilestonesByProject,
