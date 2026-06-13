@@ -1,0 +1,20 @@
+# Orchestrator runtime artifacts
+orchestrator/next_check_note.txt
+orchestrator/registry/logs/
+orchestrator/__pycache__/
+__pycache__/
+*.pyc
+
+# Local Claude settings
+.claude/settings.local.json
+
+# Node / Vite / PWA build artifacts
+node_modules/
+dist/
+dist-ssr/
+dev-dist/
+*.local
+.DS_Store
+*.log
+.vite/
+*.tsbuildinfo
