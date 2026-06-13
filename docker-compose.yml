@@ -1,0 +1,31 @@
+# Stride — production compose file. This lives on the VPS (in the deploy dir)
+# and is what the CD pipeline restarts. The CI build pushes a fresh
+# ghcr.io/dkayode/stride:latest; `scripts/deploy.sh` pulls it and runs
+# `docker compose up -d` against this file.
+#
+# Networking: the container's nginx listens on 80 internally and is published
+# ONLY on 127.0.0.1:3002. The VPS host nginx terminates TLS for
+# stride.k4yod3.com and proxies to 127.0.0.1:3002. Do not change this bind or
+# expose the port publicly — the localhost bind is what keeps the host nginx
+# upstream working unchanged.
+
+services:
+  stride:
+    image: ghcr.io/dkayode/stride:latest
+    container_name: stride
+    restart: unless-stopped
+    # localhost-only publish so only the host nginx can reach it.
+    ports:
+      - "127.0.0.1:3002:80"
+    # nginx:alpine has no curl guaranteed; use busybox wget --spider.
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
