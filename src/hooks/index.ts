@@ -10,5 +10,6 @@ export {
   useProjects,
   useProject,
   useMilestones,
+  useProjectProgress,
   useMilestonesByProject,
 } from './useProjects';

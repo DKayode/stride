@@ -1,6 +1,8 @@
+import { useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/database';
-import type { ID, Milestone, Project } from '../types';
+import { computeProjectProgress } from '../lib/progress';
+import type { ID, Milestone, Project, ProjectProgress } from '../types';
 
 /** Reactive list of projects ordered by `sortOrder` (archived excluded). */
 export function useProjects(includeArchived = false): Project[] {
@@ -28,6 +30,19 @@ export function useMilestones(projectId: ID | undefined): Milestone[] {
         : Promise.resolve<Milestone[]>([]),
     [projectId],
     [] as Milestone[],
+  );
+}
+
+/**
+ * Reactive derived progress for a single project. Recomputes whenever the
+ * project or its milestones change. D7 will extend this with linked-habit
+ * contribution; the underlying `computeProjectProgress` already supports it.
+ */
+export function useProjectProgress(project: Project | undefined): ProjectProgress | undefined {
+  const milestones = useMilestones(project?.id);
+  return useMemo(
+    () => (project ? computeProjectProgress(project, milestones) : undefined),
+    [project, milestones],
   );
 }
 
