@@ -1,0 +1,164 @@
+name: Deploy Stride
+
+# Continuous deployment: on every push to main, gate (typecheck + test +
+# build), then build & push a Docker image to GHCR, then deploy to the VPS.
+on:
+  push:
+    branches: [main]
+  # Allow a manual re-run from the Actions tab (e.g. to redeploy latest).
+  workflow_dispatch:
+
+# Never run two deploys at once; let an in-flight deploy finish.
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  # Image name MUST be lowercase — GHCR rejects uppercase. The repo owner is
+  # "DKayode" (capital D), so this is hardcoded lowercase, NOT derived from
+  # github.repository_owner.
+  IMAGE: ghcr.io/dkayode/stride
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # GATE — fail fast BEFORE building/pushing any image. A red typecheck or test
+  # blocks the whole pipeline (build/deploy never run).
+  # ---------------------------------------------------------------------------
+  gate:
+    name: Typecheck, test & build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Enable pnpm via corepack (pinned)
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.30.3 --activate
+
+      - name: Resolve pnpm store path
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm run build
+
+  # ---------------------------------------------------------------------------
+  # BUILD — build the image and push BOTH :latest and :sha-<short> to GHCR.
+  # ---------------------------------------------------------------------------
+  build:
+    name: Build & push image
+    needs: gate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Derive image tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix=sha-,format=short
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ---------------------------------------------------------------------------
+  # DEPLOY — sync the compose file + deploy script to the VPS, then run the
+  # deploy (pull :latest, up -d, prune, verify healthy). SSH/host details come
+  # ONLY from secrets. The VPS is unreachable from CI here, so this job runs for
+  # real only once the secrets below are configured.
+  # ---------------------------------------------------------------------------
+  deploy:
+    name: Deploy to VPS
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compute short SHA
+        id: vars
+        run: echo "sha_short=$(echo "${GITHUB_SHA}" | cut -c1-7)" >> "$GITHUB_OUTPUT"
+
+      - name: Copy compose file & deploy script to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          source: "docker-compose.yml,scripts/deploy.sh"
+          target: "/opt/stride"
+          strip_components: 0
+
+      - name: Run deploy on VPS
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          # Forward only what the script needs. GHCR_PAT is OPTIONAL: set it
+          # (a read:packages PAT) only if the GHCR package is PRIVATE; for a
+          # public package leave it unset and the VPS pulls without logging in.
+          envs: IMAGE,IMAGE_SHA,GHCR_USER,GHCR_PAT,STRIDE_DIR
+          script: |
+            set -euo pipefail
+            cd /opt/stride
+            chmod +x deploy.sh
+            ./deploy.sh
+        env:
+          IMAGE: ${{ env.IMAGE }}
+          IMAGE_SHA: ${{ env.IMAGE }}:sha-${{ steps.vars.outputs.sha_short }}
+          GHCR_USER: ${{ github.actor }}
+          GHCR_PAT: ${{ secrets.GHCR_PAT }}
+          STRIDE_DIR: /opt/stride
