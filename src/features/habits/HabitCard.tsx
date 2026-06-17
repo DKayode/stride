@@ -1,10 +1,12 @@
-import { useMemo } from 'react';
-import { Check, Flame, Minus, Plus, Trophy } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Check, Flame, Minus, Play, Plus, Square, Trophy } from 'lucide-react';
 import { useHabitCompletions } from '../../hooks';
 import { incrementHabit, toggleHabit } from '../../db';
 import { getIcon } from '../../lib/appearance';
 import { computeStreak } from '../../lib/streaks';
 import { todayKey } from '../../lib/date';
+import { elapsedToUnit, formatAmount, formatElapsed, isTimeUnit } from '../../lib/duration';
+import { getTimerStart, startTimer, stopTimer } from '../../lib/timers';
 import { isDayComplete, isQuantifiedHabit, type DayKey, type Habit } from '../../types';
 
 interface HabitCardProps {
@@ -34,6 +36,37 @@ export function HabitCard({ habit, date, onEdit }: HabitCardProps) {
   const done = isDayComplete(habit, dayValue);
   const quantified = isQuantifiedHabit(habit);
   const progress = quantified ? Math.min(1, dayValue / habit.target) : done ? 1 : 0;
+
+  // Start/stop timer for time-unit quantified habits. The active timer's start
+  // timestamp persists in localStorage so it survives reloads; `now` ticks
+  // once a second while running so the elapsed display stays live.
+  const timed = quantified && isTimeUnit(habit.unit);
+  const [startedAt, setStartedAt] = useState<number | null>(() =>
+    timed ? getTimerStart(habit.id) : null,
+  );
+  const [now, setNow] = useState(() => Date.now());
+  const running = startedAt !== null;
+  const elapsed = startedAt !== null ? Math.max(0, now - startedAt) : 0;
+
+  useEffect(() => {
+    if (!running) return;
+    setNow(Date.now());
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [running]);
+
+  function toggleTimer() {
+    if (running) {
+      const begun = stopTimer(habit.id);
+      setStartedAt(null);
+      if (begun !== null && isQuantifiedHabit(habit)) {
+        const amount = elapsedToUnit(Date.now() - begun, habit.unit);
+        if (amount > 0) void incrementHabit(habit, amount, date);
+      }
+    } else {
+      setStartedAt(startTimer(habit.id));
+    }
+  }
 
   return (
     <li className="overflow-hidden rounded-2xl border border-surface-2 bg-surface">
@@ -66,7 +99,7 @@ export function HabitCard({ habit, date, onEdit }: HabitCardProps) {
               </span>
               {quantified && (
                 <span className="tabular-nums">
-                  {dayValue}/{habit.target} {habit.unit}
+                  {formatAmount(dayValue)}/{habit.target} {habit.unit}
                 </span>
               )}
             </span>
@@ -75,6 +108,22 @@ export function HabitCard({ habit, date, onEdit }: HabitCardProps) {
 
         {quantified ? (
           <div className="flex shrink-0 items-center gap-1.5">
+            {timed && (
+              <button
+                type="button"
+                aria-label={running ? `Stop timer for ${habit.name}` : `Start timer for ${habit.name}`}
+                aria-pressed={running}
+                onClick={toggleTimer}
+                className={`tap flex h-9 items-center gap-1.5 rounded-full px-3 text-sm font-medium tabular-nums ${
+                  running
+                    ? 'bg-danger/15 text-danger'
+                    : 'border border-surface-2 text-slate-300 active:bg-surface-2'
+                }`}
+              >
+                {running ? <Square className="size-3.5" aria-hidden /> : <Play className="size-3.5" aria-hidden />}
+                {running ? formatElapsed(elapsed) : 'Start'}
+              </button>
+            )}
             <button
               type="button"
               aria-label={`Decrease ${habit.name}`}
