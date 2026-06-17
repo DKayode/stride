@@ -55,6 +55,8 @@ function MilestoneRow({ milestone, color }: { milestone: Milestone; color: strin
   const [editId, setEditId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editDeadline, setEditDeadline] = useState('');
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState('');
 
   const hasSubtasks = subtasks.length > 0;
   const completedCount = subtasks.reduce((n, s) => (s.completed ? n + 1 : n), 0);
@@ -89,6 +91,19 @@ function MilestoneRow({ milestone, color }: { milestone: Milestone; color: strin
       await updateSubtask(editId, { title, deadline: editDeadline || null });
     }
     setEditId(null);
+  }
+
+  function startTitleEdit() {
+    setTitleDraft(milestone.title);
+    setEditingTitle(true);
+  }
+
+  async function saveTitleEdit() {
+    const title = titleDraft.trim();
+    if (title) {
+      await updateMilestone(milestone.id, { title });
+    }
+    setEditingTitle(false);
   }
 
   return (
@@ -131,33 +146,75 @@ function MilestoneRow({ milestone, color }: { milestone: Milestone; color: strin
           </button>
         )}
 
-        <button
-          type="button"
-          onClick={() => setExpanded((v) => !v)}
-          className={`min-w-0 flex-1 truncate text-left text-sm ${
-            milestone.completed ? 'text-slate-500 line-through' : ''
-          }`}
-        >
-          {milestone.title}
-          {hasSubtasks && (
-            <span className="ml-1.5 text-xs text-slate-500">
-              {completedCount}/{subtasks.length}
-            </span>
-          )}
-        </button>
+        {editingTitle ? (
+          <>
+            <input
+              value={titleDraft}
+              onChange={(e) => setTitleDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') void saveTitleEdit();
+                if (e.key === 'Escape') setEditingTitle(false);
+              }}
+              autoFocus
+              className="min-w-0 flex-1 rounded-lg border border-surface-2 bg-surface px-2 py-1.5 text-sm outline-none focus:border-brand"
+            />
+            <button
+              type="button"
+              onClick={() => void saveTitleEdit()}
+              aria-label="Save milestone title"
+              className="tap rounded-md p-1.5 text-brand active:text-brand-strong"
+            >
+              <Check className="size-4" aria-hidden />
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditingTitle(false)}
+              aria-label="Cancel edit"
+              className="tap rounded-md p-1.5 text-slate-500 active:text-slate-300"
+            >
+              <X className="size-4" aria-hidden />
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={() => setExpanded((v) => !v)}
+              className={`min-w-0 flex-1 whitespace-normal break-words text-left text-sm ${
+                milestone.completed ? 'text-slate-500 line-through' : ''
+              }`}
+            >
+              {milestone.title}
+              {hasSubtasks && (
+                <span className="ml-1.5 text-xs text-slate-500">
+                  {completedCount}/{subtasks.length}
+                </span>
+              )}
+            </button>
 
-        {milestone.deadline && <DeadlineChip deadline={milestone.deadline} completed={milestone.completed} />}
+            {milestone.deadline && <DeadlineChip deadline={milestone.deadline} completed={milestone.completed} />}
 
-        <button
-          type="button"
-          aria-label={`Delete ${milestone.title}`}
-          onClick={() => void (confirmId === milestone.id ? deleteMilestone(milestone.id) : setConfirmId(milestone.id))}
-          className={`tap rounded-md p-1.5 ${
-            confirmId === milestone.id ? 'bg-danger/15 text-danger' : 'text-slate-500 active:text-slate-300'
-          }`}
-        >
-          <Trash2 className="size-4" aria-hidden />
-        </button>
+            <button
+              type="button"
+              aria-label={`Edit ${milestone.title}`}
+              onClick={startTitleEdit}
+              className="tap rounded-md p-1.5 text-slate-500 active:text-slate-300"
+            >
+              <Pencil className="size-4" aria-hidden />
+            </button>
+
+            <button
+              type="button"
+              aria-label={`Delete ${milestone.title}`}
+              onClick={() => void (confirmId === milestone.id ? deleteMilestone(milestone.id) : setConfirmId(milestone.id))}
+              className={`tap rounded-md p-1.5 ${
+                confirmId === milestone.id ? 'bg-danger/15 text-danger' : 'text-slate-500 active:text-slate-300'
+              }`}
+            >
+              <Trash2 className="size-4" aria-hidden />
+            </button>
+          </>
+        )}
       </div>
 
       {expanded && (
@@ -225,7 +282,7 @@ function MilestoneRow({ milestone, color }: { milestone: Milestone; color: strin
                     >
                       <Check className="size-3" aria-hidden />
                     </button>
-                    <span className={`min-w-0 flex-1 truncate text-sm ${s.completed ? 'text-slate-500 line-through' : ''}`}>
+                    <span className={`min-w-0 flex-1 whitespace-normal break-words text-sm ${s.completed ? 'text-slate-500 line-through' : ''}`}>
                       {s.title}
                     </span>
                     {s.deadline && <DeadlineChip deadline={s.deadline} completed={s.completed} />}
@@ -317,7 +374,7 @@ export function ProjectDetail({ open, project, onClose }: ProjectDetailProps) {
               <span className="truncate font-semibold">{project.name}</span>
             </div>
             {project.description && (
-              <p className="mt-0.5 line-clamp-2 text-sm text-slate-400">{project.description}</p>
+              <p className="mt-0.5 whitespace-normal break-words text-sm text-slate-400">{project.description}</p>
             )}
             <p className="mt-1 text-xs text-slate-500">
               {progress && progress.milestonesTotal > 0

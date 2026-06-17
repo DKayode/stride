@@ -54,3 +54,24 @@ export function isOverdue(
 export function formatDayKeyShort(key: DayKey): string {
   return dayKeyToDate(key).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
+
+/** Whether `key` is the current local day. */
+export function isToday(key: DayKey, today: DayKey = todayKey()): boolean {
+  return key === today;
+}
+
+/**
+ * Friendly label for a day key relative to today, used by the habit day
+ * navigator (D4): `Today`, `Yesterday`, or a compact weekday + date
+ * (e.g. `Sat, Jun 13`) for any other day.
+ */
+export function formatRelativeDay(key: DayKey, today: DayKey = todayKey()): string {
+  const delta = diffDayKeys(today, key);
+  if (delta === 0) return 'Today';
+  if (delta === 1) return 'Yesterday';
+  return dayKeyToDate(key).toLocaleDateString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+}

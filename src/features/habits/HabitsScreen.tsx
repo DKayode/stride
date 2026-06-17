@@ -1,15 +1,27 @@
 import { useState } from 'react';
-import { ListChecks, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ListChecks, Plus } from 'lucide-react';
 import { useHabits } from '../../hooks';
+import { formatRelativeDay, isToday, shiftDayKey, todayKey } from '../../lib/date';
 import { HabitCard } from './HabitCard';
 import { HabitForm } from './HabitForm';
-import type { Habit } from '../../types';
+import type { DayKey, Habit } from '../../types';
 
 /** Habit tracking screen: the day's habits with create / edit / track controls. */
 export function HabitsScreen() {
   const habits = useHabits();
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Habit | undefined>(undefined);
+  // The day the screen is tracking; defaults to today and never goes future.
+  const [selectedDay, setSelectedDay] = useState<DayKey>(todayKey());
+  const atToday = isToday(selectedDay);
+
+  function goPrevDay() {
+    setSelectedDay((d) => shiftDayKey(d, -1));
+  }
+
+  function goNextDay() {
+    setSelectedDay((d) => (isToday(d) ? d : shiftDayKey(d, 1)));
+  }
 
   function openCreate() {
     setEditing(undefined);
@@ -38,6 +50,29 @@ export function HabitsScreen() {
         </button>
       </header>
 
+      {habits.length > 0 && (
+        <div className="flex items-center justify-between rounded-xl border border-surface-2 bg-surface px-2 py-1.5">
+          <button
+            type="button"
+            aria-label="Previous day"
+            onClick={goPrevDay}
+            className="tap rounded-lg p-2 text-slate-300 active:bg-surface-2"
+          >
+            <ChevronLeft className="size-5" aria-hidden />
+          </button>
+          <span className="text-sm font-medium">{formatRelativeDay(selectedDay)}</span>
+          <button
+            type="button"
+            aria-label="Next day"
+            onClick={goNextDay}
+            disabled={atToday}
+            className="tap rounded-lg p-2 text-slate-300 active:bg-surface-2 disabled:opacity-30"
+          >
+            <ChevronRight className="size-5" aria-hidden />
+          </button>
+        </div>
+      )}
+
       {habits.length === 0 ? (
         <div className="mt-10 flex flex-col items-center gap-3 text-center text-slate-400">
           <ListChecks className="size-12 text-surface-2" aria-hidden />
@@ -57,7 +92,7 @@ export function HabitsScreen() {
       ) : (
         <ul className="flex flex-col gap-3">
           {habits.map((habit) => (
-            <HabitCard key={habit.id} habit={habit} onEdit={openEdit} />
+            <HabitCard key={habit.id} habit={habit} date={selectedDay} onEdit={openEdit} />
           ))}
         </ul>
       )}
