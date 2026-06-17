@@ -55,7 +55,15 @@ export function ProjectsScreen() {
         </ul>
       )}
 
-      <ProjectForm open={createOpen} onClose={() => setCreateOpen(false)} />
+      {/* Key by the create session so the form remounts with fresh state each
+          time it opens — otherwise ProjectForm's useState initializers (seeded
+          from `project`) run only once and a reopened "New project" form keeps
+          the previously entered values. Mirrors the HabitForm fix (9c3d82d). */}
+      <ProjectForm
+        key={createOpen ? 'new' : 'closed'}
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+      />
       {activeProject && (
         <ProjectDetail open project={activeProject} onClose={() => setActive(undefined)} />
       )}
