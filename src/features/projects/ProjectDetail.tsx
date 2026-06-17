@@ -180,7 +180,7 @@ function MilestoneRow({ milestone, color }: { milestone: Milestone; color: strin
             <button
               type="button"
               onClick={() => setExpanded((v) => !v)}
-              className={`min-w-0 flex-1 truncate text-left text-sm ${
+              className={`min-w-0 flex-1 whitespace-normal break-words text-left text-sm ${
                 milestone.completed ? 'text-slate-500 line-through' : ''
               }`}
             >
@@ -282,7 +282,7 @@ function MilestoneRow({ milestone, color }: { milestone: Milestone; color: strin
                     >
                       <Check className="size-3" aria-hidden />
                     </button>
-                    <span className={`min-w-0 flex-1 truncate text-sm ${s.completed ? 'text-slate-500 line-through' : ''}`}>
+                    <span className={`min-w-0 flex-1 whitespace-normal break-words text-sm ${s.completed ? 'text-slate-500 line-through' : ''}`}>
                       {s.title}
                     </span>
                     {s.deadline && <DeadlineChip deadline={s.deadline} completed={s.completed} />}
@@ -374,7 +374,7 @@ export function ProjectDetail({ open, project, onClose }: ProjectDetailProps) {
               <span className="truncate font-semibold">{project.name}</span>
             </div>
             {project.description && (
-              <p className="mt-0.5 line-clamp-2 text-sm text-slate-400">{project.description}</p>
+              <p className="mt-0.5 whitespace-normal break-words text-sm text-slate-400">{project.description}</p>
             )}
             <p className="mt-1 text-xs text-slate-500">
               {progress && progress.milestonesTotal > 0
