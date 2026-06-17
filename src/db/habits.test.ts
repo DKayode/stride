@@ -130,6 +130,30 @@ describe('quantified increment', () => {
     expect(await countCompletions(habit.id)).toBe(0);
   });
 
+  it('accrues fractional amounts (timer path) into a specific day', async () => {
+    const habit = await createHabit({
+      type: 'quantified',
+      name: 'Deep work',
+      target: 2,
+      unit: 'hours',
+    });
+    const day = '2026-06-10';
+
+    // Two timed sessions logged into a past day: 1.5h then 0.25h.
+    await incrementHabit(habit, 1.5, day);
+    await incrementHabit(habit, 0.25, day);
+    let completion = await getCompletion(habit.id, day);
+    expect(completion?.value).toBeCloseTo(1.75);
+    expect(isDayComplete(habit, completion!.value)).toBe(false);
+    expect(await countCompletions(habit.id)).toBe(1);
+
+    // Reaching the (non-integer-friendly) target completes the day.
+    await incrementHabit(habit, 0.25, day);
+    completion = await getCompletion(habit.id, day);
+    expect(completion?.value).toBeCloseTo(2);
+    expect(isDayComplete(habit, completion!.value)).toBe(true);
+  });
+
   it('clearHabitDay removes the day record', async () => {
     const habit = await createHabit({ type: 'binary', name: 'Walk' });
     await toggleHabit(habit);
