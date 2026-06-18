@@ -43,7 +43,7 @@ export function HabitsScreen() {
         <button
           type="button"
           onClick={openCreate}
-          className="tap flex items-center gap-1.5 rounded-full bg-brand px-3.5 py-2 text-sm font-semibold text-white active:bg-brand-strong"
+          className="tap flex items-center gap-1.5 rounded-full bg-brand px-3.5 py-2 text-sm font-semibold text-white hover:bg-brand-strong active:bg-brand-strong"
         >
           <Plus className="size-4" aria-hidden />
           New
@@ -56,7 +56,7 @@ export function HabitsScreen() {
             type="button"
             aria-label="Previous day"
             onClick={goPrevDay}
-            className="tap rounded-lg p-2 text-slate-300 active:bg-surface-2"
+            className="tap rounded-lg p-2 text-slate-300 hover:bg-surface-2 active:bg-surface-2"
           >
             <ChevronLeft className="size-5" aria-hidden />
           </button>
@@ -66,7 +66,7 @@ export function HabitsScreen() {
             aria-label="Next day"
             onClick={goNextDay}
             disabled={atToday}
-            className="tap rounded-lg p-2 text-slate-300 active:bg-surface-2 disabled:opacity-30"
+            className="tap rounded-lg p-2 text-slate-300 hover:bg-surface-2 active:bg-surface-2 disabled:opacity-30"
           >
             <ChevronRight className="size-5" aria-hidden />
           </button>
@@ -84,7 +84,7 @@ export function HabitsScreen() {
           <button
             type="button"
             onClick={openCreate}
-            className="tap mt-1 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white active:bg-brand-strong"
+            className="tap mt-1 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-strong active:bg-brand-strong"
           >
             Create a habit
           </button>

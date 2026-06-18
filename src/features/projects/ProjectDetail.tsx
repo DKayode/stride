@@ -114,7 +114,7 @@ function MilestoneRow({ milestone, color }: { milestone: Milestone; color: strin
           aria-label={expanded ? 'Collapse milestone' : 'Expand milestone'}
           aria-expanded={expanded}
           onClick={() => setExpanded((v) => !v)}
-          className="tap rounded-md p-1 text-slate-500 active:text-slate-300"
+          className="tap rounded-md p-1 text-slate-500 hover:text-slate-300 active:text-slate-300"
         >
           {expanded ? <ChevronDown className="size-4" aria-hidden /> : <ChevronRight className="size-4" aria-hidden />}
         </button>
@@ -162,7 +162,7 @@ function MilestoneRow({ milestone, color }: { milestone: Milestone; color: strin
               type="button"
               onClick={() => void saveTitleEdit()}
               aria-label="Save milestone title"
-              className="tap rounded-md p-1.5 text-brand active:text-brand-strong"
+              className="tap rounded-md p-1.5 text-brand hover:text-brand-strong active:text-brand-strong"
             >
               <Check className="size-4" aria-hidden />
             </button>
@@ -170,7 +170,7 @@ function MilestoneRow({ milestone, color }: { milestone: Milestone; color: strin
               type="button"
               onClick={() => setEditingTitle(false)}
               aria-label="Cancel edit"
-              className="tap rounded-md p-1.5 text-slate-500 active:text-slate-300"
+              className="tap rounded-md p-1.5 text-slate-500 hover:text-slate-300 active:text-slate-300"
             >
               <X className="size-4" aria-hidden />
             </button>
@@ -198,7 +198,7 @@ function MilestoneRow({ milestone, color }: { milestone: Milestone; color: strin
               type="button"
               aria-label={`Edit ${milestone.title}`}
               onClick={startTitleEdit}
-              className="tap rounded-md p-1.5 text-slate-500 active:text-slate-300"
+              className="tap rounded-md p-1.5 text-slate-500 hover:text-slate-300 active:text-slate-300"
             >
               <Pencil className="size-4" aria-hidden />
             </button>
@@ -208,7 +208,7 @@ function MilestoneRow({ milestone, color }: { milestone: Milestone; color: strin
               aria-label={`Delete ${milestone.title}`}
               onClick={() => void (confirmId === milestone.id ? deleteMilestone(milestone.id) : setConfirmId(milestone.id))}
               className={`tap rounded-md p-1.5 ${
-                confirmId === milestone.id ? 'bg-danger/15 text-danger' : 'text-slate-500 active:text-slate-300'
+                confirmId === milestone.id ? 'bg-danger/15 text-danger' : 'text-slate-500 hover:text-slate-300 active:text-slate-300'
               }`}
             >
               <Trash2 className="size-4" aria-hidden />
@@ -255,7 +255,7 @@ function MilestoneRow({ milestone, color }: { milestone: Milestone; color: strin
                       type="button"
                       onClick={() => void saveEdit()}
                       aria-label="Save sub-task"
-                      className="tap rounded-md p-1.5 text-brand active:text-brand-strong"
+                      className="tap rounded-md p-1.5 text-brand hover:text-brand-strong active:text-brand-strong"
                     >
                       <Check className="size-4" aria-hidden />
                     </button>
@@ -263,7 +263,7 @@ function MilestoneRow({ milestone, color }: { milestone: Milestone; color: strin
                       type="button"
                       onClick={() => setEditId(null)}
                       aria-label="Cancel edit"
-                      className="tap rounded-md p-1.5 text-slate-500 active:text-slate-300"
+                      className="tap rounded-md p-1.5 text-slate-500 hover:text-slate-300 active:text-slate-300"
                     >
                       <X className="size-4" aria-hidden />
                     </button>
@@ -290,7 +290,7 @@ function MilestoneRow({ milestone, color }: { milestone: Milestone; color: strin
                       type="button"
                       aria-label={`Edit ${s.title}`}
                       onClick={() => startEdit(s.id, s.title, s.deadline)}
-                      className="tap rounded-md p-1 text-slate-500 active:text-slate-300"
+                      className="tap rounded-md p-1 text-slate-500 hover:text-slate-300 active:text-slate-300"
                     >
                       <Pencil className="size-3.5" aria-hidden />
                     </button>
@@ -299,7 +299,7 @@ function MilestoneRow({ milestone, color }: { milestone: Milestone; color: strin
                       aria-label={`Delete ${s.title}`}
                       onClick={() => void handleDeleteSubtask(s.id)}
                       className={`tap rounded-md p-1 ${
-                        confirmId === s.id ? 'bg-danger/15 text-danger' : 'text-slate-500 active:text-slate-300'
+                        confirmId === s.id ? 'bg-danger/15 text-danger' : 'text-slate-500 hover:text-slate-300 active:text-slate-300'
                       }`}
                     >
                       <Trash2 className="size-3.5" aria-hidden />
@@ -332,7 +332,7 @@ function MilestoneRow({ milestone, color }: { milestone: Milestone; color: strin
               onClick={() => void handleAddSubtask()}
               disabled={newTitle.trim().length === 0}
               aria-label="Add sub-task"
-              className="tap flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand text-white active:bg-brand-strong disabled:opacity-40"
+              className="tap flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand text-white hover:bg-brand-strong active:bg-brand-strong disabled:opacity-40"
             >
               <Plus className="size-4" aria-hidden />
             </button>
@@ -400,7 +400,7 @@ export function ProjectDetail({ open, project, onClose }: ProjectDetailProps) {
             type="button"
             onClick={() => setEditOpen(true)}
             aria-label="Edit project"
-            className="tap rounded-full p-2 text-slate-400 active:bg-surface-2 active:text-slate-100"
+            className="tap rounded-full p-2 text-slate-400 hover:bg-surface-2 hover:text-slate-100 active:bg-surface-2 active:text-slate-100"
           >
             <Pencil className="size-4" aria-hidden />
           </button>
@@ -452,7 +452,7 @@ export function ProjectDetail({ open, project, onClose }: ProjectDetailProps) {
               onClick={handleAdd}
               disabled={newTitle.trim().length === 0}
               aria-label="Add milestone"
-              className="tap flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand text-white active:bg-brand-strong disabled:opacity-40"
+              className="tap flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand text-white hover:bg-brand-strong active:bg-brand-strong disabled:opacity-40"
             >
               <Plus className="size-5" aria-hidden />
             </button>

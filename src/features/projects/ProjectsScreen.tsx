@@ -25,7 +25,7 @@ export function ProjectsScreen() {
         <button
           type="button"
           onClick={() => setCreateOpen(true)}
-          className="tap flex items-center gap-1.5 rounded-full bg-brand px-3.5 py-2 text-sm font-semibold text-white active:bg-brand-strong"
+          className="tap flex items-center gap-1.5 rounded-full bg-brand px-3.5 py-2 text-sm font-semibold text-white hover:bg-brand-strong active:bg-brand-strong"
         >
           <Plus className="size-4" aria-hidden />
           New
@@ -42,7 +42,7 @@ export function ProjectsScreen() {
           <button
             type="button"
             onClick={() => setCreateOpen(true)}
-            className="tap mt-1 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white active:bg-brand-strong"
+            className="tap mt-1 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-strong active:bg-brand-strong"
           >
             Create a project
           </button>

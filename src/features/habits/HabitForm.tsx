@@ -212,7 +212,7 @@ export function HabitForm({ open, habit, onClose }: HabitFormProps) {
           type="button"
           onClick={handleSave}
           disabled={!canSave}
-          className="tap mt-1 flex items-center justify-center gap-2 rounded-xl bg-brand px-4 py-3 font-semibold text-white active:bg-brand-strong disabled:opacity-40"
+          className="tap mt-1 flex items-center justify-center gap-2 rounded-xl bg-brand px-4 py-3 font-semibold text-white hover:bg-brand-strong active:bg-brand-strong disabled:opacity-40"
         >
           <Check className="size-5" aria-hidden />
           {editing ? 'Save changes' : 'Create habit'}

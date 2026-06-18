@@ -51,7 +51,7 @@ export function Sheet({ open, title, onClose, children }: SheetProps) {
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="tap rounded-full p-1.5 text-slate-400 active:bg-surface-2 active:text-slate-100"
+            className="tap rounded-full p-1.5 text-slate-400 hover:bg-surface-2 hover:text-slate-100 active:bg-surface-2 active:text-slate-100"
           >
             <X className="size-5" aria-hidden />
           </button>
