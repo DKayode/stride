@@ -1,24 +1,5 @@
-import {
-  Activity,
-  Download,
-  LayoutDashboard,
-  ListChecks,
-  Target,
-  type LucideIcon,
-} from 'lucide-react';
-import type { Tab } from './BottomNav.tsx';
-
-interface NavItem {
-  tab: Tab;
-  label: string;
-  icon: LucideIcon;
-}
-
-const ITEMS: NavItem[] = [
-  { tab: 'dashboard', label: 'Home', icon: LayoutDashboard },
-  { tab: 'habits', label: 'Habits', icon: ListChecks },
-  { tab: 'projects', label: 'Projects', icon: Target },
-];
+import { Activity, Download } from 'lucide-react';
+import { NAV_ITEMS, type Tab } from './navItems.ts';
 
 interface SideNavProps {
   tab: Tab;
@@ -46,7 +27,7 @@ export function SideNav({ tab, onChange, canInstall, onInstall }: SideNavProps) 
       </span>
 
       <div className="flex flex-col gap-1">
-        {ITEMS.map(({ tab: t, label, icon: Icon }) => {
+        {NAV_ITEMS.map(({ tab: t, label, icon: Icon }) => {
           const active = tab === t;
           return (
             <button
