@@ -34,10 +34,10 @@ export function HabitsScreen() {
   }
 
   return (
-    <section className="flex flex-col gap-4 p-4">
+    <section className="flex flex-col gap-4 p-4 lg:p-6">
       <header className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold tracking-tight">Habits</h1>
+          <h1 className="text-xl font-bold tracking-tight lg:text-2xl">Habits</h1>
           <p className="text-sm text-slate-400">Build consistency, one day at a time.</p>
         </div>
         <button
@@ -51,7 +51,7 @@ export function HabitsScreen() {
       </header>
 
       {habits.length > 0 && (
-        <div className="flex items-center justify-between rounded-xl border border-surface-2 bg-surface px-2 py-1.5">
+        <div className="flex items-center justify-between rounded-xl border border-surface-2 bg-surface px-2 py-1.5 lg:max-w-xs">
           <button
             type="button"
             aria-label="Previous day"
@@ -74,7 +74,7 @@ export function HabitsScreen() {
       )}
 
       {habits.length === 0 ? (
-        <div className="mt-10 flex flex-col items-center gap-3 text-center text-slate-400">
+        <div className="mt-10 flex flex-col items-center gap-3 text-center text-slate-400 lg:mx-auto lg:max-w-sm">
           <ListChecks className="size-12 text-surface-2" aria-hidden />
           <p className="font-medium text-slate-300">No habits yet</p>
           <p className="max-w-xs text-sm">
@@ -90,7 +90,7 @@ export function HabitsScreen() {
           </button>
         </div>
       ) : (
-        <ul className="flex flex-col gap-3">
+        <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-4 xl:grid-cols-3">
           {habits.map((habit) => (
             <HabitCard key={habit.id} habit={habit} date={selectedDay} onEdit={openEdit} />
           ))}
