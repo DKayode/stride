@@ -9,11 +9,12 @@ interface HeaderProps {
 /**
  * Slim sticky app header: the Stride wordmark plus an "Install Stride" button
  * that appears only when an install prompt is available and the app isn't
- * already running standalone / as a TWA.
+ * already running standalone / as a TWA. Mobile-only — on desktop (lg+) the
+ * sidebar owns the wordmark and install button, so this is hidden.
  */
 export function Header({ canInstall, onInstall }: HeaderProps) {
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between border-b border-surface-2/60 bg-ink/80 px-4 py-3 backdrop-blur pt-[max(0.75rem,env(safe-area-inset-top))]">
+    <header className="sticky top-0 z-30 flex items-center justify-between border-b border-surface-2/60 bg-ink/80 px-4 py-3 backdrop-blur pt-[max(0.75rem,env(safe-area-inset-top))] lg:hidden">
       <span className="flex items-center gap-2">
         <Activity className="size-5 text-brand" aria-hidden />
         <span className="text-base font-bold tracking-tight">Stride</span>

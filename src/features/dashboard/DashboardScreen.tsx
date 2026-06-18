@@ -17,9 +17,9 @@ export function DashboardScreen() {
   const activeProject = active ? projects.find((p) => p.id === active.id) : undefined;
 
   return (
-    <section className="flex flex-col gap-6 p-4">
+    <section className="flex flex-col gap-6 p-4 lg:gap-8 lg:p-6">
       <header>
-        <h1 className="text-xl font-bold tracking-tight">Dashboard</h1>
+        <h1 className="text-xl font-bold tracking-tight lg:text-2xl">Dashboard</h1>
         <p className="text-sm text-slate-400">Your week at a glance.</p>
       </header>
 
@@ -41,7 +41,7 @@ export function DashboardScreen() {
             No projects yet — create one to see its progress here.
           </p>
         ) : (
-          <ul className="flex flex-col gap-3">
+          <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-4 xl:grid-cols-3">
             {projects.map((project) => (
               <ProjectCard key={project.id} project={project} onOpen={setActive} />
             ))}

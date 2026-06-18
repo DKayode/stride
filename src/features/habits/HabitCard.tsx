@@ -117,7 +117,7 @@ export function HabitCard({ habit, date, onEdit }: HabitCardProps) {
                 className={`tap flex h-9 items-center gap-1.5 rounded-full px-3 text-sm font-medium tabular-nums ${
                   running
                     ? 'bg-danger/15 text-danger'
-                    : 'border border-surface-2 text-slate-300 active:bg-surface-2'
+                    : 'border border-surface-2 text-slate-300 hover:bg-surface-2 active:bg-surface-2'
                 }`}
               >
                 {running ? <Square className="size-3.5" aria-hidden /> : <Play className="size-3.5" aria-hidden />}
@@ -129,7 +129,7 @@ export function HabitCard({ habit, date, onEdit }: HabitCardProps) {
               aria-label={`Decrease ${habit.name}`}
               onClick={() => void incrementHabit(habit, -1, date)}
               disabled={dayValue <= 0}
-              className="tap flex size-9 items-center justify-center rounded-full border border-surface-2 text-slate-300 active:bg-surface-2 disabled:opacity-30"
+              className="tap flex size-9 items-center justify-center rounded-full border border-surface-2 text-slate-300 hover:bg-surface-2 active:bg-surface-2 disabled:opacity-30"
             >
               <Minus className="size-4" aria-hidden />
             </button>
@@ -137,7 +137,7 @@ export function HabitCard({ habit, date, onEdit }: HabitCardProps) {
               type="button"
               aria-label={`Increase ${habit.name}`}
               onClick={() => void incrementHabit(habit, 1, date)}
-              className="tap flex size-9 items-center justify-center rounded-full text-white"
+              className="tap flex size-9 items-center justify-center rounded-full text-white transition-opacity hover:opacity-90"
               style={{ backgroundColor: habit.color }}
             >
               <Plus className="size-4" aria-hidden />
@@ -149,7 +149,7 @@ export function HabitCard({ habit, date, onEdit }: HabitCardProps) {
             aria-label={done ? `Mark ${habit.name} not done` : `Mark ${habit.name} done`}
             aria-pressed={done}
             onClick={() => void toggleHabit(habit, date)}
-            className={`tap flex size-10 shrink-0 items-center justify-center rounded-full border-2 transition ${
+            className={`tap flex size-10 shrink-0 items-center justify-center rounded-full border-2 transition hover:opacity-90 ${
               done ? 'border-transparent text-white' : 'border-surface-2 text-transparent'
             }`}
             style={done ? { backgroundColor: habit.color } : undefined}
