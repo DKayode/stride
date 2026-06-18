@@ -11,6 +11,8 @@ interface SheetProps {
 /**
  * Mobile-first bottom sheet modal. Slides up from the bottom, dims the
  * backdrop, locks body scroll while open, and closes on backdrop tap or Esc.
+ * Responsive: at lg it centers as a dialog (max-w-lg, fully rounded, internal
+ * scroll) instead of a bottom sheet — same component, behaviour unchanged.
  */
 export function Sheet({ open, title, onClose, children }: SheetProps) {
   useEffect(() => {
@@ -31,7 +33,7 @@ export function Sheet({ open, title, onClose, children }: SheetProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center"
+      className="fixed inset-0 z-50 flex items-end justify-center lg:items-center lg:p-6"
       role="dialog"
       aria-modal="true"
       aria-label={title}
@@ -42,7 +44,7 @@ export function Sheet({ open, title, onClose, children }: SheetProps) {
         onClick={onClose}
         className="absolute inset-0 bg-black/60"
       />
-      <div className="relative flex max-h-[88dvh] w-full max-w-md flex-col rounded-t-3xl border-t border-surface-2 bg-surface pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl shadow-black/50">
+      <div className="relative flex max-h-[88dvh] w-full max-w-md flex-col rounded-t-3xl border-t border-surface-2 bg-surface pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl shadow-black/50 lg:max-w-lg lg:rounded-3xl lg:border lg:pb-4">
         <div className="flex items-center justify-between px-5 pb-2 pt-4">
           <h2 className="text-lg font-semibold">{title}</h2>
           <button
