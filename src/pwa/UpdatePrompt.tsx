@@ -39,7 +39,7 @@ export function UpdatePrompt() {
           <button
             type="button"
             onClick={() => void updateServiceWorker(true)}
-            className="tap rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-white active:bg-brand-strong"
+            className="tap rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-strong active:bg-brand-strong"
           >
             Reload
           </button>
@@ -54,7 +54,7 @@ export function UpdatePrompt() {
         type="button"
         onClick={close}
         aria-label="Dismiss"
-        className="tap rounded-lg p-1 text-slate-400 active:text-slate-200"
+        className="tap rounded-lg p-1 text-slate-400 hover:text-slate-200 active:text-slate-200"
       >
         <X className="size-4" aria-hidden />
       </button>
